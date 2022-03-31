@@ -289,40 +289,43 @@ module.exports.changePassword = async (req, res) => {
             new_password,
             confirm_password
         } = req.body
-        console.log(req.body);
         let checkUser = await connection.query(
             `select * from users where id = '${userId}' `
         )
-        console.log(checkUser,"check ust")
-        if(checkUser.password[0]){
-            console.log("checkUser----------",checkUser)
-        }
-        
-
-        
-       
-    
         if (checkUser.rows.length > 0) {
-
-            let salt = await bcrypt.genSaltSync(10);
-            let hashPassword = await bcrypt.hash(new_password, salt)
-
-            let updatePassword = await connectionUtil(
-                `update users set password='${hashPassword}' where id='${userId}' `
-            )
-            res.json({
-                status: true,
-                statusCode: 200,
-                message: 'User Password Changed Successfully',
-                data: updatePassword
-            })
-
+            let checkPassword = await bcrypt.compare(old_password, checkUser.rows[0].password)
+            if (checkPassword) {
+                if (new_password == confirm_password) {
+                    let salt = await bcrypt.genSaltSync(10);
+                    let hashPassword = await bcrypt.hash(password, salt)
+                    let updatePassword = await connection.query(
+                        `update users set password='${hashPassword}' 
+                        where email='${checkUser.rows[0].email}' `
+                    )
+                    res.json({
+                        status: true,
+                        statusCode: 200,
+                        message: 'Password Changed Successfully',
+                    })
+                } else {
+                    res.json({
+                        status: false,
+                        statusCode: 400,
+                        message: 'new and old password not matched',
+                    })
+                }
+            } else {
+                res.json({
+                    status: false,
+                    statusCode: 400,
+                    message: 'wrong old password',
+                })
+            }
         } else {
             res.json({
                 status: false,
                 statusCode: 400,
-                message: 'User Is Not Valid',
-                data: ""
+                message: 'This Email Address Is Not Valid'
             })
         }
     } catch (error) {
